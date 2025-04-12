@@ -1,0 +1,30 @@
+{
+    "name": "openapi-interface-generator",
+    "version": "1.0.0",
+    "description": "Generate TypeScript interfaces from OpenAPI 3.1.x specs",
+    "main": "dist/generate.js",
+    "bin": {
+        "openapi-interface-generator": "./bin/cli.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "prepare": "npm run build"
+    },
+    "keywords": [
+        "openapi",
+        "typescript",
+        "generator"
+    ],
+    "author": "Duarte",
+    "license": "MIT",
+    "dependencies": {
+        "minimist": "^1.2.8",
+        "yamljs": "^0.3.0"
+    },
+    "devDependencies": {
+        "@types/minimist": "^1.2.5",
+        "@types/node": "^22.14.1",
+        "@types/yamljs": "^0.2.34",
+        "typescript": "^5.0.0"
+    }
+}
