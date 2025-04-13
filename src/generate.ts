@@ -19,9 +19,14 @@ const interfacesFolder = args['interfaces-folder'] || 'interfaces';
 const inputFolder = args['requests-folder'] || 'requests';
 const outputFolder = args['responses-folder'] || 'responses';
 
-const interfaceDir = `${generatedDir}/${interfacesFolder}`;
-const inputDir = `${generatedDir}/${inputFolder}`;
-const outputDir = `${generatedDir}/${outputFolder}`;
+const interfaceDir = path.join(__dirname, generatedDir, interfacesFolder);
+const inputDir = path.join(__dirname, generatedDir, inputFolder);
+const outputDir = path.join(__dirname, generatedDir, outputFolder);
+
+console.log(`Generating contracts from OpenAPI spec at ${openApiPath}...`);
+console.log(`Generated files will be saved in ${generatedDir}...`);
+console.log(`Interface files will be saved in ${interfaceDir}...`);
+console.log(`Request files will be saved in ${inputDir}...`);
 
 const outputDirs = [interfaceDir, inputDir, outputDir];
 outputDirs.forEach((dir) => {
