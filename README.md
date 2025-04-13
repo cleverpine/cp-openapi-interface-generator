@@ -19,18 +19,7 @@ npm install --save-dev openapi-interface-generator
 
 ## 🚀 Usage
 
-### Option 1: CLI (Locally or via npm script):
-
-```bash
-npx openapi-interface-generator  \
-  --openApiPath=./openapi.yaml \
-  --generatedDir=./src/app/contracts \
-  --interfacesFolder=interfaces \
-  --requestsFolder=requests \
-  --responsesFolder=responses
-```
-
-### Option 2: You can add it to your npm scripts
+### Option 1: Add it to your npm scripts
 
 Add this to your package.json:
 
@@ -39,6 +28,18 @@ Add this to your package.json:
     "generate-interfaces": "openapi-interface-generator --openApiPath=./openapi.yaml --generatedDir=./src/app/contracts --interfacesFolder=interfaces --requestsFolder=requests --responsesFolder=responses"
 }
 ```
+
+### Option 2: CLI
+
+```bash
+openapi-interface-generator  \
+  --openApiPath=./openapi.yaml \
+  --generatedDir=./src/app/contracts \
+  --interfacesFolder=interfaces \
+  --requestsFolder=requests \
+  --responsesFolder=responses
+```
+
 
 ### Running using the npm script
 ```bash
