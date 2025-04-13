@@ -22,7 +22,7 @@ npm install --save-dev openapi-interface-generator
 ### Option 1: CLI (Locally or via npm script):
 
 ```bash
-ts-node utils/generate-openapi-interfaces.ts \
+npx utils/generate-openapi-interfaces.ts \
   --openApiPath=./openapi.yaml \
   --generatedDir=./src/app/contracts \
   --interfacesFolder=interfaces \
@@ -36,7 +36,7 @@ Add this to your package.json:
 
 ```bash
 "scripts": {
-    "generate-interfaces": "ts-node utils/generate-openapi-interfaces.ts --openApiPath=./openapi.yaml --generatedDir=./src/app/contracts --interfacesFolder=interfaces --requestsFolder=requests --responsesFolder=responses"
+    "generate-interfaces": "npx utils/generate-openapi-interfaces.ts --openApiPath=./openapi.yaml --generatedDir=./src/app/contracts --interfacesFolder=interfaces --requestsFolder=requests --responsesFolder=responses"
 }
 ```
 
