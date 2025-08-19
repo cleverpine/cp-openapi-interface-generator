@@ -8,9 +8,8 @@ const HTTP_SUCCESS_STATUSES = ['200', '201', '202', '204', '205', '206', '207', 
 const PRIMITIVE_TYPES = ['String', 'Number', 'Boolean', 'Array', 'Object'];
 const DEFAULT_PATHS = {
   OPENAPI: './openapi.yaml',
-  GENERATED_DIR: './src/generated',
-  MIDDLEWARE_CONFIG: './middleware-config.js',
-  CONTROLLERS_IMPL: '../../controllers/impl'
+  GENERATED_DIR: './node_modules/@generated',
+  MIDDLEWARE_CONFIG: './middleware-config.js'
 } as const;
 
 const FOLDER_NAMES = {
@@ -54,7 +53,6 @@ const args = minimist(process.argv.slice(2), {
     'models-folder': 'modelsFolder',
     'routes-folder': 'routesFolder',
     'middleware-config-path': 'middlewareConfigPath',
-    'controllers-impl-path': 'controllersImplPath',
   },
 }) as Args;
 
@@ -64,7 +62,6 @@ const controllersFolder: string = args['controllers-folder'] || FOLDER_NAMES.CON
 const modelsFolder: string = args['models-folder'] || FOLDER_NAMES.MODELS;
 const routesFolder: string = args['routes-folder'] || FOLDER_NAMES.ROUTES;
 const middlewareConfigPath: string = args['middleware-config-path'] || DEFAULT_PATHS.MIDDLEWARE_CONFIG;
-const controllersImplPath: string = args['controllers-impl-path'] || DEFAULT_PATHS.CONTROLLERS_IMPL;
 
 const controllersDir: string = generatedDir.endsWith('/') ? generatedDir : `${generatedDir}/` + controllersFolder;
 const modelsDir: string = generatedDir.endsWith('/') ? generatedDir : `${generatedDir}/` + modelsFolder;
@@ -844,8 +841,8 @@ function findCommonPathPrefix(paths: string[]): string {
 Object.entries(groupedByTag).forEach(([tag, methods]) => {
   const fileBase = toKebabCase(tag);
   const routeFile = path.join(routesDir, `${fileBase}-routes.ts`);
-  const controllerImplName = `${toPascalCase(tag)}ControllerImpl`;
-  const controllerInstanceName = `${toPascalCase(tag).toLowerCase()}ControllerImpl`;
+  const interfaceName = `${toPascalCase(tag)}Interface`;
+  const controllerName = `${toPascalCase(tag).toLowerCase()}Controller`;
 
   const routeLines: string[] = [];
   const usedMiddleware = new Set<string>();
@@ -857,7 +854,7 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
   routeLines.push(` */`);
   routeLines.push('');
   routeLines.push(`import { Router } from 'express';`);
-  routeLines.push(`import { ${controllerImplName} } from '${controllersImplPath}/${controllerImplName}';`);
+  routeLines.push(`import { ${interfaceName} } from '../${controllersFolder}/${fileBase}-interface';`);
   routeLines.push('');
 
   // Collect middleware used in this file
@@ -876,9 +873,13 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
     routeLines.push('');
   }
 
-  // Router setup
+  // Router setup - using dependency injection pattern
   routeLines.push(`const router = Router();`);
-  routeLines.push(`const ${controllerInstanceName} = new ${controllerImplName}();`);
+  routeLines.push('');
+  routeLines.push(`// Controller instance should be injected from outside`);
+  routeLines.push(`// Example: const router = createRoutes(${controllerName});`);
+  routeLines.push(`export function createRoutes(${controllerName}: ${interfaceName}): Router {`);
+  routeLines.push(`  const router = Router();`);
   routeLines.push('');
 
   // Determine the common path prefix for this tag's routes
@@ -900,7 +901,7 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
 
     // Build route definition
     const middlewareChain = middleware.length > 0 ? middleware.join(', ') + ', ' : '';
-    const routeDefinition = `router.${method.toLowerCase()}('${routePath}', ${middlewareChain}${controllerInstanceName}.${fnName}.bind(${controllerInstanceName}));`;
+    const routeDefinition = `  router.${method.toLowerCase()}('${routePath}', ${middlewareChain}${controllerName}.${fnName}.bind(${controllerName}));`;
 
     // Add comments for clarity
     routeLines.push(`// ${method.toUpperCase()} ${path} - ${fnName}`);
@@ -908,8 +909,9 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
     routeLines.push('');
   });
 
-  // Export router
-  routeLines.push(`export default router;`);
+  // Return the configured router
+  routeLines.push(`  return router;`);
+  routeLines.push(`}`);
 
   // Write route file
   fs.writeFileSync(routeFile, routeLines.join('\n'));
@@ -934,7 +936,7 @@ if (parameterTypes.size > 0) {
 
 console.log('');
 console.log(`📋 Next Steps:`);
-console.log(`  1. Create controller implementations in ${controllersImplPath}/`);
+console.log(`  1. Create controller implementations`);
 console.log(`  2. Implement each controller method to call your existing endpoint logic`);
 console.log(`  3. Wire up the generated routes in your Express app`);
 console.log('');

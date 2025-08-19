@@ -43,8 +43,7 @@ openapi-interface-generator \
   --controllers-folder=controllers \
   --models-folder=models \
   --routes-folder=routes \
-  --middleware-config-path=./middleware-config.js \
-  --controllers-impl-path=../../controllers/impl
+  --middleware-config-path=./middleware-config.js
 ```
 
 ### Running using the npm script
@@ -62,7 +61,6 @@ npm run generate
 | `--models-folder`          | Folder for TypeScript model files         | `models`                   |
 | `--routes-folder`          | Folder for Express route definitions      | `routes`                   |
 | `--middleware-config-path` | Path to middleware configuration file     | `./middleware-config.js`   |
-| `--controllers-impl-path`  | Relative path from routes to controller implementations | `../../controllers/impl`   |
 
 ## 📂 Output Structure
 
@@ -100,9 +98,8 @@ npm run generate
 ### Routes (`routes/` folder)
 - **Express route definitions**: Ready-to-use router configurations
 - **Middleware integration**: Automatic middleware application based on configuration
-- **Controller binding**: Proper method binding for controller implementations
+- **Controller binding**: Proper method binding for controller interfaces
 - **Path conversion**: OpenAPI paths converted to Express route format
-- **Controller imports**: Uses `--controllers-impl-path` as relative path from routes directory
 
 ## 🛠 Middleware Configuration
 
@@ -126,6 +123,6 @@ module.exports = {
 
 After running the generator:
 
-1. **Create controller implementations** in your configured controllers implementation path
+1. **Create controller implementations**
 2. **Implement each controller method** to call your existing endpoint logic  
 3. **Wire up the generated routes** 
