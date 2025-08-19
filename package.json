@@ -22,9 +22,11 @@
         "yamljs": "^0.3.0"
     },
     "devDependencies": {
+        "@types/express": "^5.0.3",
         "@types/minimist": "^1.2.5",
         "@types/node": "^22.14.1",
         "@types/yamljs": "^0.2.34",
+        "openapi-interface-generator": "^1.0.2",
         "typescript": "^5.0.0"
     }
 }
