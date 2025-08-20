@@ -15,7 +15,7 @@
         "typescript",
         "generator"
     ],
-    "author": "Cleverpine",
+    "author": "CleverPine",
     "license": "MIT",
     "dependencies": {
         "minimist": "^1.2.8",
