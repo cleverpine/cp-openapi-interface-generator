@@ -1,6 +1,6 @@
-# openapi-interface-generator
+# cp-openapi-interface-generator
 
-A TypeScript utility to generate strongly typed contracts, interfaces, and Express routes from an OpenAPI YAML specification. This tool creates modular TypeScript models, Express controller interfaces, and route definitions with middleware support.
+A TypeScript utility to generate strongly typed interfaces and Express routes from an OpenAPI YAML specification. This tool creates modular TypeScript models, Express controller interfaces, and route definitions with middleware support.
 
 ## Features
 
@@ -17,7 +17,7 @@ A TypeScript utility to generate strongly typed contracts, interfaces, and Expre
 ## 🛠 Installation
 
 ```bash
-npm install --save-dev openapi-interface-generator
+npm install --save-dev cp-openapi-interface-generator
 ```
 
 ## 🚀 Usage
@@ -29,7 +29,7 @@ Add this to your package.json:
 ```json
 {
   "scripts": {
-    "generate": "openapi-interface-generator --open-api-path=./openapi.yaml --generated-dir=./src/generated"
+    "generate": "cp-openapi-interface-generator --open-api-path=./openapi.yaml --generated-dir=./src/generated"
   }
 }
 ```
@@ -37,7 +37,7 @@ Add this to your package.json:
 ### Option 2: CLI
 
 ```bash
-openapi-interface-generator \
+cp-openapi-interface-generator \
   --open-api-path=./openapi.yaml \
   --generated-dir=./src/generated \
   --controllers-folder=controllers \
