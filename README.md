@@ -1,12 +1,15 @@
-# openapi-interface-generator
+# cp-openapi-interface-generator
 
-A simple TypeScript utility to generate strongly typed contracts (input, output, and interfaces) based on an OpenAPI YAML specification. This tool helps backend and frontend developers work with consistent request and response types.
+A TypeScript utility to generate strongly typed interfaces and Express routes from an OpenAPI YAML specification. This tool creates modular TypeScript models, Express controller interfaces, and route definitions with middleware support.
 
 ## Features
 
-- Generate TypeScript interfaces from OpenAPI schemas
-- Organize input (request), output (response), and controller interfaces
-- Supports nested objects and `$ref` references
+- Generate modular TypeScript interfaces from OpenAPI schemas
+- Create Express controller interfaces organized by OpenAPI tags
+- Generate Express route definitions with middleware integration
+- Support for nested objects and `$ref` references
+- Reusable parameter types for path and query parameters
+- Individual model files with proper dependency imports
 - Fully configurable output paths
 
 ---
@@ -14,7 +17,7 @@ A simple TypeScript utility to generate strongly typed contracts (input, output,
 ## 🛠 Installation
 
 ```bash
-npm install --save-dev openapi-interface-generator
+npm install --save-dev cp-openapi-interface-generator
 ```
 
 ## 🚀 Usage
@@ -23,49 +26,103 @@ npm install --save-dev openapi-interface-generator
 
 Add this to your package.json:
 
-```bash
-"scripts": {
-    "generate-interfaces": "openapi-interface-generator --openApiPath=./openapi.yaml --generatedDir=./src/app/contracts --interfacesFolder=interfaces --requestsFolder=requests --responsesFolder=responses"
+```json
+{
+  "scripts": {
+    "generate": "cp-openapi-interface-generator --open-api-path=./openapi.yaml --generated-dir=./src/generated"
+  }
 }
 ```
 
 ### Option 2: CLI
 
 ```bash
-openapi-interface-generator  \
-  --openApiPath=./openapi.yaml \
-  --generatedDir=./src/app/contracts \
-  --interfacesFolder=interfaces \
-  --requestsFolder=requests \
-  --responsesFolder=responses
+cp-openapi-interface-generator \
+  --open-api-path=./openapi.yaml \
+  --generated-dir=./src/generated \
+  --controllers-folder=controllers \
+  --models-folder=models \
+  --routes-folder=routes \
+  --middleware-config-path=./middleware-config.js
 ```
-
 
 ### Running using the npm script
 ```bash
-npm run generate-interfaces
+npm run generate
 ```
 
 ## ⚙ CLI Options
 
-| Option               | Description                                  | Default                  |
-|----------------------|----------------------------------------------|--------------------------|
-| `--openApiPath`      | Path to OpenAPI YAML file                    | `./openapi.yaml`         |
-| `--generatedDir`     | Base output folder for all contracts         | `./src/app/contracts`    |
-| `--interfacesFolder` | Folder for generated Express interfaces      | `interfaces`             |
-| `--requestsFolder`   | Folder for generated request DTOs            | `requests`               |
-| `--responsesFolder`  | Folder for generated response DTOs           | `responses`              |
-
-
+| Option                     | Description                                | Default                    |
+|----------------------------|--------------------------------------------|----------------------------|
+| `--open-api-path`          | Path to OpenAPI YAML file                 | `./openapi.yaml`           |
+| `--generated-dir`          | Base output folder for all generated files| `./src/generated`          |
+| `--controllers-folder`     | Folder for Express controller interfaces  | `controllers`              |
+| `--models-folder`          | Folder for TypeScript model files         | `models`                   |
+| `--routes-folder`          | Folder for Express route definitions      | `routes`                   |
+| `--middleware-config-path` | Path to middleware configuration file     | `./middleware-config.js`   |
 
 ## 📂 Output Structure
 
 ```bash
-/contracts
-  ├── interfaces
-  │   └── tag-name-interface.ts     <-- Controller interfaces
-  ├── requests
-  │   └── tag-name.request.ts       <-- Input DTOs
-  └── responses
-      └── tag-name.response.ts      <-- Output DTOs
+/src/generated
+  ├── models/
+  │   ├── index.ts                    <-- Exports all models
+  │   ├── UserModel.ts                <-- Individual model files
+  │   ├── MessageModel.ts             <-- with dependency imports
+  │   └── ...
+  ├── controllers/
+  │   ├── user-interface.ts           <-- Express controller interfaces
+  │   ├── message-interface.ts        <-- organized by OpenAPI tags
+  │   └── ...
+  └── routes/
+      ├── user-routes.ts              <-- Express route definitions
+      ├── message-routes.ts           <-- with middleware integration
+      └── ...
 ```
+
+## 📋 Generated Files
+
+### Models (`models/` folder)
+- **Individual model files**: One TypeScript file per schema type
+- **Dependency management**: Automatic imports for referenced types
+- **Index file**: Central export point for all models
+- **Reusable parameter types**: Shared path and query parameter interfaces
+
+### Controllers (`controllers/` folder)
+- **Express controller interfaces**: Type-safe method signatures
+- **Request/Response typing**: Strongly typed Express Request/Response objects
+- **Parameter typing**: Path and query parameters with proper types
+- **Tag organization**: One interface file per OpenAPI tag
+
+### Routes (`routes/` folder)
+- **Express route definitions**: Ready-to-use router configurations
+- **Middleware integration**: Automatic middleware application based on configuration
+- **Controller binding**: Proper method binding for controller interfaces
+- **Path conversion**: OpenAPI paths converted to Express route format
+
+## 🛠 Middleware Configuration
+
+Create a `middleware-config.js` file to define middleware for your routes:
+
+```javascript
+module.exports = {
+  getMiddleware: (operationId, method, tags) => {
+    // Return array of middleware function names
+    if (tags.includes('auth')) return ['authenticate', 'authorize'];
+    return [];
+  },
+  getMiddlewareImport: (middlewareName) => {
+    // Return import statement for middleware
+    return `require('../middleware/${middlewareName}')`;
+  }
+};
+```
+
+## 🚀 Next Steps
+
+After running the generator:
+
+1. **Create controller implementations**
+2. **Implement each controller method** to call your existing endpoint logic  
+3. **Wire up the generated routes** 
