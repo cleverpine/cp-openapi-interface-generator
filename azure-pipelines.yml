@@ -1,0 +1,29 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- checkout: self
+  submodules: true
+  persistCredentials: true
+
+- task: Npm@1
+  displayName: npm install
+  inputs:
+    command: 'install'
+
+- task: Npm@1
+  displayName: npm build
+  inputs:
+    command: 'custom'
+    customCommand: 'run build'
+
+- task: Npm@1
+  displayName: npm publish
+  inputs:
+    command: 'publish'
+    publishEndpoint: 'npm_cleverpine_dev_cicd'
