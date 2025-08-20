@@ -1,6 +1,6 @@
 {
-    "name": "openapi-interface-generator",
-    "version": "1.0.2",
+    "name": "@cleverpine/openapi-interface-generator",
+    "version": "1.0.0",
     "description": "Generate TypeScript interfaces from OpenAPI 3.1.x specs",
     "main": "dist/generate.js",
     "bin": {
@@ -15,7 +15,7 @@
         "typescript",
         "generator"
     ],
-    "author": "Duarte",
+    "author": "CleverPine",
     "license": "MIT",
     "dependencies": {
         "minimist": "^1.2.8",
