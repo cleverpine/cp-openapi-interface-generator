@@ -1,6 +1,6 @@
 {
     "name": "cp-openapi-interface-generator",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Generate TypeScript interfaces from OpenAPI 3.1.x specs",
     "main": "dist/generate.js",
     "bin": {
