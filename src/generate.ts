@@ -25,7 +25,6 @@ interface Args {
   'models-folder'?: string;
   'routes-folder'?: string;
   'middleware-config-path'?: string;
-  'controllers-impl-path'?: string;
 }
 
 interface OpenAPISpec {
@@ -61,7 +60,7 @@ const generatedDir: string = args['generated-dir'] || DEFAULT_PATHS.GENERATED_DI
 const controllersFolder: string = args['controllers-folder'] || FOLDER_NAMES.CONTROLLERS;
 const modelsFolder: string = args['models-folder'] || FOLDER_NAMES.MODELS;
 const routesFolder: string = args['routes-folder'] || FOLDER_NAMES.ROUTES;
-const middlewareConfigPath: string = args['middleware-config-path'] || DEFAULT_PATHS.MIDDLEWARE_CONFIG;
+const middlewareConfigPath: string = path.resolve(args['middleware-config-path'] || DEFAULT_PATHS.MIDDLEWARE_CONFIG);
 
 const controllersDir: string = generatedDir.endsWith('/') ? generatedDir : `${generatedDir}/` + controllersFolder;
 const modelsDir: string = generatedDir.endsWith('/') ? generatedDir : `${generatedDir}/` + modelsFolder;
