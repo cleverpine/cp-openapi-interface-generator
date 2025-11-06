@@ -1,31 +1,31 @@
 {
-    "name": "cp-openapi-interface-generator",
-    "version": "1.0.2",
-    "description": "Generate TypeScript interfaces from OpenAPI 3.1.x specs",
-    "main": "dist/generate.js",
-    "bin": {
-        "cp-openapi-interface-generator": "./bin/cli.js"
-    },
-    "scripts": {
-        "build": "tsc",
-        "prepare": "npm run build"
-    },
-    "keywords": [
-        "openapi",
-        "typescript",
-        "generator"
-    ],
-    "author": "CleverPine",
-    "license": "MIT",
-    "dependencies": {
-        "minimist": "^1.2.8",
-        "yamljs": "^0.3.0"
-    },
-    "devDependencies": {
-        "@types/express": "^5.0.3",
-        "@types/minimist": "^1.2.5",
-        "@types/node": "^22.14.1",
-        "@types/yamljs": "^0.2.34",
-        "typescript": "^5.0.0"
-    }
+  "name": "cp-openapi-interface-generator",
+  "version": "1.1.0",
+  "description": "Generate TypeScript interfaces from OpenAPI 3.1.x specs",
+  "main": "dist/generate.js",
+  "bin": {
+    "cp-openapi-interface-generator": "./bin/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "openapi",
+    "typescript",
+    "generator"
+  ],
+  "author": "CleverPine",
+  "license": "MIT",
+  "dependencies": {
+    "minimist": "^1.2.8",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^22.14.1",
+    "@types/yamljs": "^0.2.34",
+    "typescript": "^5.0.0"
+  }
 }

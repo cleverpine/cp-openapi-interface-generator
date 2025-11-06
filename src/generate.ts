@@ -9,13 +9,13 @@ const PRIMITIVE_TYPES = ['String', 'Number', 'Boolean', 'Array', 'Object'];
 const DEFAULT_PATHS = {
   OPENAPI: './openapi.yaml',
   GENERATED_DIR: './node_modules/@generated',
-  MIDDLEWARE_CONFIG: './middleware-config.js'
+  MIDDLEWARE_CONFIG: './middleware-config.js',
 } as const;
 
 const FOLDER_NAMES = {
   CONTROLLERS: 'controllers',
-  MODELS: 'models', 
-  ROUTES: 'routes'
+  MODELS: 'models',
+  ROUTES: 'routes',
 } as const;
 
 interface Args {
@@ -73,7 +73,7 @@ console.log(`Model files will be saved in ${modelsDir}...`);
 console.log(`Route files will be saved in ${routesDir}...`);
 
 const outputDirs: string[] = [controllersDir, modelsDir, routesDir];
-outputDirs.forEach((dir) => {
+outputDirs.forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
@@ -81,19 +81,19 @@ outputDirs.forEach((dir) => {
  * Convert string to PascalCase (e.g., "user-name" -> "UserName")
  */
 const toPascalCase = (name: string): string =>
-    name
-        .replace(/[^a-zA-Z0-9]/g, ' ')
-        .replace(/(?:^|\s|_)(\w)/g, (_, c) => c.toUpperCase())
-        .replace(/\s+/g, '');
+  name
+    .replace(/[^a-zA-Z0-9]/g, ' ')
+    .replace(/(?:^|\s|_)(\w)/g, (_, c) => c.toUpperCase())
+    .replace(/\s+/g, '');
 
 /**
  * Convert string to kebab-case (e.g., "UserName" -> "user-name")
  */
 const toKebabCase = (name: string): string =>
-    name
-        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-        .replace(/[^a-zA-Z0-9]+/g, '-')
-        .toLowerCase();
+  name
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .toLowerCase();
 
 /**
  * Resolve OpenAPI $ref reference to actual schema object
@@ -158,25 +158,25 @@ function extractPathParams(parameters: any[], spec: OpenAPISpec): Record<string,
 
   const pathParams: Record<string, string> = {};
   parameters
-      .filter(param => {
-        // Handle both inline parameters and $ref parameters
-        if (param.$ref) {
-          const resolvedParam = resolveRef(param.$ref, spec);
-          return resolvedParam && resolvedParam.in === 'path';
+    .filter(param => {
+      // Handle both inline parameters and $ref parameters
+      if (param.$ref) {
+        const resolvedParam = resolveRef(param.$ref, spec);
+        return resolvedParam && resolvedParam.in === 'path';
+      }
+      return param.in === 'path';
+    })
+    .forEach(param => {
+      if (param.$ref) {
+        // Resolve $ref parameter
+        const resolvedParam = resolveRef(param.$ref, spec);
+        if (resolvedParam) {
+          pathParams[resolvedParam.name] = getTypeFromSchema(resolvedParam.schema, spec);
         }
-        return param.in === 'path';
-      })
-      .forEach(param => {
-        if (param.$ref) {
-          // Resolve $ref parameter
-          const resolvedParam = resolveRef(param.$ref, spec);
-          if (resolvedParam) {
-            pathParams[resolvedParam.name] = getTypeFromSchema(resolvedParam.schema);
-          }
-        } else {
-          pathParams[param.name] = getTypeFromSchema(param.schema);
-        }
-      });
+      } else {
+        pathParams[param.name] = getTypeFromSchema(param.schema, spec);
+      }
+    });
 
   return pathParams;
 }
@@ -189,27 +189,27 @@ function extractQueryParams(parameters: any[], spec: OpenAPISpec): Record<string
 
   const queryParams: Record<string, string> = {};
   parameters
-      .filter(param => {
-        // Handle both inline parameters and $ref parameters
-        if (param.$ref) {
-          const resolvedParam = resolveRef(param.$ref, spec);
-          return resolvedParam && resolvedParam.in === 'query';
+    .filter(param => {
+      // Handle both inline parameters and $ref parameters
+      if (param.$ref) {
+        const resolvedParam = resolveRef(param.$ref, spec);
+        return resolvedParam && resolvedParam.in === 'query';
+      }
+      return param.in === 'query';
+    })
+    .forEach(param => {
+      if (param.$ref) {
+        // Resolve $ref parameter
+        const resolvedParam = resolveRef(param.$ref, spec);
+        if (resolvedParam) {
+          const optional = resolvedParam.required ? '' : '?';
+          queryParams[resolvedParam.name + optional] = getTypeFromSchema(resolvedParam.schema, spec);
         }
-        return param.in === 'query';
-      })
-      .forEach(param => {
-        if (param.$ref) {
-          // Resolve $ref parameter
-          const resolvedParam = resolveRef(param.$ref, spec);
-          if (resolvedParam) {
-            const optional = resolvedParam.required ? '' : '?';
-            queryParams[resolvedParam.name + optional] = getTypeFromSchema(resolvedParam.schema);
-          }
-        } else {
-          const optional = param.required ? '' : '?';
-          queryParams[param.name + optional] = getTypeFromSchema(param.schema);
-        }
-      });
+      } else {
+        const optional = param.required ? '' : '?';
+        queryParams[param.name + optional] = getTypeFromSchema(param.schema, spec);
+      }
+    });
 
   return queryParams;
 }
@@ -217,8 +217,22 @@ function extractQueryParams(parameters: any[], spec: OpenAPISpec): Record<string
 /**
  * Convert OpenAPI schema to TypeScript type
  */
-function getTypeFromSchema(schema: any): string {
+function getTypeFromSchema(schema: any, spec?: OpenAPISpec): string {
   if (!schema) return 'unknown'; // Use 'unknown' instead of 'any' for better type safety
+
+  // Handle $ref - resolve it first
+  if (schema.$ref && spec) {
+    const resolvedSchema = resolveRef(schema.$ref, spec);
+    if (resolvedSchema) {
+      return getTypeFromSchema(resolvedSchema, spec);
+    }
+    return 'unknown';
+  }
+
+  // Handle enums - generate union type
+  if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
+    return schema.enum.map((value: any) => `'${value}'`).join(' | ');
+  }
 
   switch (schema.type) {
     case 'integer':
@@ -229,7 +243,7 @@ function getTypeFromSchema(schema: any): string {
     case 'boolean':
       return 'boolean';
     case 'array':
-      const itemType = getTypeFromSchema(schema.items);
+      const itemType = getTypeFromSchema(schema.items, spec);
       return `${itemType}[]`;
     default:
       return 'unknown'; // Use 'unknown' for unhandled schema types
@@ -288,10 +302,12 @@ function getReusableParamTypeName(params: Record<string, string>, paramType: str
 
   // For multiple parameters, create composite name based on all parameter names
   if (keys.length > 1 && keys.length <= 3) {
-    const paramNames = keys.map(key => {
-      const cleanKey = key.replace(/\?$/, ''); // Remove optional marker if present
-      return toPascalCase(cleanKey);
-    }).join('');
+    const paramNames = keys
+      .map(key => {
+        const cleanKey = key.replace(/\?$/, ''); // Remove optional marker if present
+        return toPascalCase(cleanKey);
+      })
+      .join('');
     const typeName = `${paramNames}${toPascalCase(paramType)}Params`;
     parameterTypes.set(typeName, signature);
     return typeName;
@@ -342,7 +358,7 @@ function processSchemaType(schema: any, typeName: string, spec: OpenAPISpec, all
 
       // Add all nested types
       nestedTypes.forEach(typeCode => {
-        const nestedTypeName = typeCode.match(/(?:export )?(?:interface|type) (\w+)/)?.[1];
+        const nestedTypeName = typeCode.match(/(?:export )?(?:interface|type|enum) (\w+)/)?.[1];
         if (nestedTypeName && !globalSeenTypes.has(nestedTypeName)) {
           globalSeenTypes.add(nestedTypeName);
           allTypes.push(typeCode);
@@ -359,7 +375,7 @@ function processSchemaType(schema: any, typeName: string, spec: OpenAPISpec, all
 
       // Add all nested types
       nestedTypes.forEach(typeCode => {
-        const nestedTypeName = typeCode.match(/(?:export )?(?:interface|type) (\w+)/)?.[1];
+        const nestedTypeName = typeCode.match(/(?:export )?(?:interface|type|enum) (\w+)/)?.[1];
         if (nestedTypeName && !globalSeenTypes.has(nestedTypeName)) {
           globalSeenTypes.add(nestedTypeName);
           allTypes.push(typeCode);
@@ -386,6 +402,18 @@ function toTsType(value: any, name: string, nestedInterfaces: string[], spec: Op
       return typeName;
     }
     return 'unknown';
+  }
+
+  // Handle inline enums - create a nested enum type
+  if (value.enum && Array.isArray(value.enum) && value.enum.length > 0) {
+    const typeName = toPascalCase(name);
+    if (!globalSeenTypes.has(typeName)) {
+      globalSeenTypes.add(typeName);
+      const enumCode = generateInterface(typeName, value, spec, nestedInterfaces, true);
+      generatedTypeDefinitions[typeName] = enumCode;
+      nestedInterfaces.push(enumCode);
+    }
+    return typeName;
   }
 
   if (value.type === 'array') {
@@ -417,6 +445,11 @@ function toTsType(value: any, name: string, nestedInterfaces: string[], spec: Op
   }
 
   if (value.type === 'object' || value.properties) {
+    // If object has no properties and no additionalProperties defined, treat as generic object
+    if (value.type === 'object' && !value.properties && value.additionalProperties === undefined) {
+      return 'Record<string, any>';
+    }
+
     const typeName = toPascalCase(`${name}Item`);
     if (!globalSeenTypes.has(typeName)) {
       globalSeenTypes.add(typeName);
@@ -441,11 +474,74 @@ function toTsType(value: any, name: string, nestedInterfaces: string[], spec: Op
 }
 
 /**
+ * Sanitize enum key to be a valid TypeScript identifier
+ */
+function sanitizeEnumKey(value: any): string {
+  const str = String(value);
+
+  // Convert to valid TypeScript identifier
+  let sanitized = str
+    // Replace non-alphanumeric chars (except underscore) with underscore
+    .replace(/[^a-zA-Z0-9_]/g, '_')
+    // Remove leading/trailing underscores
+    .replace(/^_+|_+$/g, '');
+
+  // Prepend underscore if starts with number
+  if (/^[0-9]/.test(sanitized)) {
+    sanitized = '_' + sanitized;
+  }
+
+  // Fallback if empty after sanitization
+  return sanitized || 'VALUE';
+}
+
+/**
+ * Get properly formatted enum value for TypeScript enum
+ */
+function getEnumValueString(value: any): string {
+  // Handle null/undefined
+  if (value === null || value === undefined) {
+    return 'null';
+  }
+
+  // Numbers and booleans don't need quotes
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  // Strings need quotes and escape single quotes
+  const stringValue = String(value).replace(/'/g, "\\'");
+  return `'${stringValue}'`;
+}
+
+/**
  * Generate TypeScript interface from OpenAPI schema
  */
-function generateInterface(name: string, schema: any, spec: OpenAPISpec, nestedInterfaces: string[] = [], exportMain = true): string {
-  if (!schema || (!schema.properties && !schema.type)) {
+function generateInterface(
+  name: string,
+  schema: any,
+  spec: OpenAPISpec,
+  nestedInterfaces: string[] = [],
+  exportMain = true,
+): string {
+  if (!schema || (!schema.properties && !schema.type && !schema.enum)) {
     return `${exportMain ? 'export ' : ''}type ${name} = unknown;`;
+  }
+
+  // Handle enum schemas - generate TypeScript enum
+  if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
+    const lines = [`${exportMain ? 'export ' : ''}enum ${name} {`];
+    const varNames = schema['x-enum-varnames'] || [];
+
+    schema.enum.forEach((value: any, index: number) => {
+      const comma = index < schema.enum.length - 1 ? ',' : '';
+      // Use x-enum-varnames if available, otherwise sanitize the value
+      const key = varNames[index] || sanitizeEnumKey(value);
+      const enumValue = getEnumValueString(value);
+      lines.push(`  ${key} = ${enumValue}${comma}`);
+    });
+    lines.push('}');
+    return lines.join('\n');
   }
 
   if (schema.type === 'array' && schema.items) {
@@ -499,7 +595,7 @@ for (const [route, methods] of Object.entries(spec.paths)) {
         requestBody,
         responseBody,
         pathParams,
-        queryParams
+        queryParams,
       });
     });
   }
@@ -626,24 +722,23 @@ function ensureExported(typeCode: string): string {
     return typeCode;
   }
 
-  // Add export to interface or type definitions
-  return typeCode.replace(/^(interface|type)\s+/, 'export $1 ');
+  // Add export to interface, type, or enum definitions
+  return typeCode.replace(/^(interface|type|enum)\s+/, 'export $1 ');
 }
 
 if (allTypes.length > 0) {
-
   // First pass: create a map of all type names for dependency resolution
   const allTypeNames = new Set<string>();
   allTypes.forEach(typeCode => {
-    const typeMatch = typeCode.match(/(?:export\s+)?(?:interface|type)\s+(\w+)/);
+    const typeMatch = typeCode.match(/(?:export\s+)?(?:interface|type|enum)\s+(\w+)/);
     if (typeMatch) {
       allTypeNames.add(typeMatch[1]);
     }
   });
 
   allTypes.forEach(typeCode => {
-    // Extract the type name from the interface/type definition
-    const typeMatch = typeCode.match(/(?:export\s+)?(?:interface|type)\s+(\w+)/);
+    // Extract the type name from the interface/type/enum definition
+    const typeMatch = typeCode.match(/(?:export\s+)?(?:interface|type|enum)\s+(\w+)/);
     if (!typeMatch) return;
 
     const typeName = typeMatch[1];
@@ -698,7 +793,7 @@ if (allTypes.length > 0) {
     ` * Generated by generate.ts`,
     ` */`,
     ``,
-    ...modelExports.sort().map(typeName => `export { ${typeName} } from './${typeName}';`)
+    ...modelExports.sort().map(typeName => `export { ${typeName} } from './${typeName}';`),
   ].join('\n');
 
   const indexFile = path.join(modelsDir, 'index.ts');
@@ -762,18 +857,19 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
     const resType = resTypeName === 'void' ? 'void' : resTypeName;
 
     // Determine path and query parameter types (use reusable names)
-    const pathParamsType = Object.keys(pathParams).length > 0
+    const pathParamsType =
+      Object.keys(pathParams).length > 0
         ? getReusableParamTypeName(pathParams, 'path', `${toPascalCase(fnName)}PathParams`)
         : '{}';
 
-    const queryParamsType = Object.keys(queryParams).length > 0
+    const queryParamsType =
+      Object.keys(queryParams).length > 0
         ? getReusableParamTypeName(queryParams, 'query', `${toPascalCase(fnName)}QueryParams`)
         : '{}';
 
-    const pathInfo = Object.keys(pathParams).length > 0 ? Object.keys(pathParams).join(', ') : 'none';
-    const queryInfo = Object.keys(queryParams).length > 0 ? Object.keys(queryParams).join(', ') : 'none';
-
-    interfaceLines.push(`  ${fnName}(req: Request<${pathParamsType}, ${resType}, ${reqType}, ${queryParamsType}>, res: Response<${resType}>): Promise<void>;`);
+    interfaceLines.push(
+      `  ${fnName}(req: Request<${pathParamsType}, ${resType}, ${reqType}, ${queryParamsType}>, res: Response<${resType}>): Promise<void>;`,
+    );
   });
 
   interfaceLines.push(`}`);
@@ -788,10 +884,12 @@ try {
   middlewareConfig = require(middlewareConfigPath);
   console.log(`✅ Loaded middleware configuration from: ${middlewareConfigPath}`);
 } catch (error) {
-  console.log(`⚠️  No middleware configuration found at: ${middlewareConfigPath} - routes will be generated without middleware`);
+  console.log(
+    `⚠️  No middleware configuration found at: ${middlewareConfigPath} - routes will be generated without middleware`,
+  );
   middlewareConfig = {
     getMiddleware: () => [],
-    getMiddlewareImport: () => null
+    getMiddlewareImport: () => null,
   };
 }
 
@@ -857,10 +955,12 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
   // Import middleware
   if (usedMiddleware.size > 0) {
     routeLines.push(`// Middleware imports`);
-    Array.from(usedMiddleware).sort().forEach(middlewareName => {
-      const importStatement = middlewareConfig.getMiddlewareImport(middlewareName);
-      routeLines.push(`const ${middlewareName} = ${importStatement};`);
-    });
+    Array.from(usedMiddleware)
+      .sort()
+      .forEach(middlewareName => {
+        const importStatement = middlewareConfig.getMiddlewareImport(middlewareName);
+        routeLines.push(`const ${middlewareName} = ${importStatement};`);
+      });
     routeLines.push('');
   }
 
@@ -882,7 +982,8 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
     const expressPath = convertPathToExpressRoute(path);
 
     // Remove the common prefix from the path since it will be mounted at /api/{prefix}
-    const routePath = commonPrefix && expressPath.startsWith(commonPrefix)
+    const routePath =
+      commonPrefix && expressPath.startsWith(commonPrefix)
         ? expressPath.slice(commonPrefix.length) || '/'
         : expressPath;
 
