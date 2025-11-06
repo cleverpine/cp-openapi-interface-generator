@@ -18,6 +18,16 @@ const FOLDER_NAMES = {
   ROUTES: 'routes',
 } as const;
 
+// Parameter type naming configuration
+const MAX_PARAM_NAME_COMBINATION = 3; // Maximum parameters to combine in type name before using fallback
+
+// Regex patterns for type dependency extraction
+const TYPE_DEPENDENCY_PATTERNS = {
+  PROPERTY_TYPE: /:\s*([A-Z][a-zA-Z0-9]*(?:\[])?)/g,
+  TYPE_ALIAS: /=\s*([A-Z][a-zA-Z0-9]*(?:\[])?)/g,
+  TYPE_DECLARATION: /(?:export\s+)?(?:interface|type|enum)\s+(\w+)/,
+} as const;
+
 interface Args {
   'open-api-path'?: string;
   'generated-dir'?: string;
@@ -73,9 +83,26 @@ console.log(`Model files will be saved in ${modelsDir}...`);
 console.log(`Route files will be saved in ${routesDir}...`);
 
 const outputDirs: string[] = [controllersDir, modelsDir, routesDir];
-outputDirs.forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
+try {
+  outputDirs.forEach(dir => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  });
+} catch (error) {
+  console.error(`❌ Failed to create output directories: ${error}`);
+  process.exit(1);
+}
+
+/**
+ * Safely write file with error handling
+ */
+function safeWriteFile(filePath: string, content: string): void {
+  try {
+    fs.writeFileSync(filePath, content);
+  } catch (error: any) {
+    console.error(`❌ Failed to write file ${filePath}: ${error.message || error}`);
+    throw error; // Re-throw to stop generation
+  }
+}
 
 /**
  * Convert string to PascalCase (e.g., "user-name" -> "UserName")
@@ -311,7 +338,7 @@ function getReusableParamTypeName(params: Record<string, string>, paramType: str
   }
 
   // For multiple parameters, create composite name based on all parameter names
-  if (keys.length > 1 && keys.length <= 3) {
+  if (keys.length > 1 && keys.length <= MAX_PARAM_NAME_COMBINATION) {
     const paramNames = keys
       .map(key => {
         const cleanKey = key.replace(/\?$/, ''); // Remove optional marker if present
@@ -629,7 +656,29 @@ function generateInterface(
   return lines.join('\n');
 }
 
-const spec: OpenAPISpec = YAML.load(openApiPath);
+// Load and validate OpenAPI specification
+let spec: OpenAPISpec;
+try {
+  spec = YAML.load(openApiPath);
+
+  // Validate spec structure
+  if (!spec || typeof spec !== 'object') {
+    throw new Error('Invalid OpenAPI spec: not an object');
+  }
+  if (!spec.paths || typeof spec.paths !== 'object') {
+    throw new Error('Invalid OpenAPI spec: missing or invalid paths');
+  }
+} catch (error: any) {
+  if (error.code === 'ENOENT') {
+    console.error(`❌ OpenAPI spec file not found: ${openApiPath}`);
+  } else if (error.message?.includes('Invalid OpenAPI')) {
+    console.error(`❌ ${error.message}`);
+  } else {
+    console.error(`❌ Failed to load OpenAPI spec from ${openApiPath}: ${error.message || error}`);
+  }
+  process.exit(1);
+}
+
 const groupedByTag: Record<string, PathMethod[]> = {};
 
 // Process all paths and methods
@@ -739,13 +788,20 @@ const modelExports: string[] = []; // Track exports for index file
 
 /**
  * Extract dependencies from a type definition
+ *
+ * Note: Only extracts simple type references. Does not handle:
+ * - Generic types (Array<T>)
+ * - Union types (A | B)
+ * - Intersection types (A & B)
+ *
+ * This is acceptable since the generator doesn't produce these patterns.
  */
 function extractTypeDependencies(typeCode: string): Set<string> {
   const dependencies = new Set<string>();
 
   // Find all custom type references (exclude primitive types)
   // Pattern 1: property type references like `: SomeType` or `: SomeType[]`
-  const typeRefs = typeCode.match(/:\s*([A-Z][a-zA-Z0-9]*(?:\[])?)/g);
+  const typeRefs = typeCode.match(TYPE_DEPENDENCY_PATTERNS.PROPERTY_TYPE);
   if (typeRefs) {
     typeRefs.forEach(ref => {
       const typeName = ref.replace(/:\s*/, '').replace(/\[]$/, '');
@@ -757,7 +813,7 @@ function extractTypeDependencies(typeCode: string): Set<string> {
   }
 
   // Pattern 2: type alias references like `= SomeType[]` or `= SomeType`
-  const aliasRefs = typeCode.match(/=\s*([A-Z][a-zA-Z0-9]*(?:\[])?)/g);
+  const aliasRefs = typeCode.match(TYPE_DEPENDENCY_PATTERNS.TYPE_ALIAS);
   if (aliasRefs) {
     aliasRefs.forEach(ref => {
       const typeName = ref.replace(/=\s*/, '').replace(/\[]$/, '');
@@ -788,7 +844,7 @@ if (allTypes.length > 0) {
   // First pass: create a map of all type names for dependency resolution
   const allTypeNames = new Set<string>();
   allTypes.forEach(typeCode => {
-    const typeMatch = typeCode.match(/(?:export\s+)?(?:interface|type|enum)\s+(\w+)/);
+    const typeMatch = typeCode.match(TYPE_DEPENDENCY_PATTERNS.TYPE_DECLARATION);
     if (typeMatch) {
       allTypeNames.add(typeMatch[1]);
     }
@@ -796,7 +852,7 @@ if (allTypes.length > 0) {
 
   allTypes.forEach(typeCode => {
     // Extract the type name from the interface/type/enum definition
-    const typeMatch = typeCode.match(/(?:export\s+)?(?:interface|type|enum)\s+(\w+)/);
+    const typeMatch = typeCode.match(TYPE_DEPENDENCY_PATTERNS.TYPE_DECLARATION);
     if (!typeMatch) return;
 
     const typeName = typeMatch[1];
@@ -839,7 +895,7 @@ if (allTypes.length > 0) {
     // Add the type definition
     fileContent.push(exportedTypeCode);
 
-    fs.writeFileSync(modelFilePath, fileContent.join('\n'));
+    safeWriteFile(modelFilePath, fileContent.join('\n'));
     generatedModelFiles.set(typeName, modelFileName);
     modelExports.push(typeName);
   });
@@ -855,7 +911,7 @@ if (allTypes.length > 0) {
   ].join('\n');
 
   const indexFile = path.join(modelsDir, 'index.ts');
-  fs.writeFileSync(indexFile, indexContent);
+  safeWriteFile(indexFile, indexContent);
 }
 
 // Generate controller interfaces for each tag with imports from models
@@ -933,18 +989,33 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
   interfaceLines.push(`}`);
 
   // Write controller interface file
-  fs.writeFileSync(interfaceFile, interfaceLines.join('\n'));
+  safeWriteFile(interfaceFile, interfaceLines.join('\n'));
 });
 
 // Load middleware configuration
 let middlewareConfig: any = null;
 try {
   middlewareConfig = require(middlewareConfigPath);
+
+  // Validate expected methods exist
+  if (
+    typeof middlewareConfig.getMiddleware !== 'function' ||
+    typeof middlewareConfig.getMiddlewareImport !== 'function'
+  ) {
+    throw new Error('Invalid middleware config: missing required methods (getMiddleware, getMiddlewareImport)');
+  }
+
   console.log(`✅ Loaded middleware configuration from: ${middlewareConfigPath}`);
-} catch (error) {
-  console.log(
-    `⚠️  No middleware configuration found at: ${middlewareConfigPath} - routes will be generated without middleware`,
-  );
+} catch (error: any) {
+  if (error.code === 'MODULE_NOT_FOUND') {
+    console.log(
+      `⚠️  No middleware configuration found at: ${middlewareConfigPath} - routes will be generated without middleware`,
+    );
+  } else {
+    console.error(`❌ Error loading middleware config: ${error.message || error}`);
+    console.log(`⚠️  Continuing without middleware configuration...`);
+  }
+
   middlewareConfig = {
     getMiddleware: () => [],
     getMiddlewareImport: () => null,
@@ -1062,7 +1133,7 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
   routeLines.push(`}`);
 
   // Write route file
-  fs.writeFileSync(routeFile, routeLines.join('\n'));
+  safeWriteFile(routeFile, routeLines.join('\n'));
 });
 
 console.log(`Files generated successfully in ${generatedDir}`);
