@@ -48,20 +48,21 @@ cp-openapi-interface-generator \
 ```
 
 ### Running using the npm script
+
 ```bash
 npm run generate
 ```
 
 ## ⚙ CLI Options
 
-| Option                     | Description                                | Default                    |
-|----------------------------|--------------------------------------------|----------------------------|
-| `--open-api-path`          | Path to OpenAPI YAML file                 | `./openapi.yaml`           |
-| `--generated-dir`          | Base output folder for all generated files| `./src/generated`          |
-| `--controllers-folder`     | Folder for Express controller interfaces  | `controllers`              |
-| `--models-folder`          | Folder for TypeScript model files         | `models`                   |
-| `--routes-folder`          | Folder for Express route definitions      | `routes`                   |
-| `--middleware-config-path` | Path to middleware configuration file     | `./middleware-config.js`   |
+| Option                     | Description                                | Default                  |
+| -------------------------- | ------------------------------------------ | ------------------------ |
+| `--open-api-path`          | Path to OpenAPI YAML file                  | `./openapi.yaml`         |
+| `--generated-dir`          | Base output folder for all generated files | `./src/generated`        |
+| `--controllers-folder`     | Folder for Express controller interfaces   | `controllers`            |
+| `--models-folder`          | Folder for TypeScript model files          | `models`                 |
+| `--routes-folder`          | Folder for Express route definitions       | `routes`                 |
+| `--middleware-config-path` | Path to middleware configuration file      | `./middleware-config.js` |
 
 ## 📂 Output Structure
 
@@ -85,18 +86,21 @@ npm run generate
 ## 📋 Generated Files
 
 ### Models (`models/` folder)
+
 - **Individual model files**: One TypeScript file per schema type
 - **Dependency management**: Automatic imports for referenced types
 - **Index file**: Central export point for all models
 - **Reusable parameter types**: Shared path and query parameter interfaces
 
 ### Controllers (`controllers/` folder)
+
 - **Express controller interfaces**: Type-safe method signatures
 - **Request/Response typing**: Strongly typed Express Request/Response objects
 - **Parameter typing**: Path and query parameters with proper types
 - **Tag organization**: One interface file per OpenAPI tag
 
 ### Routes (`routes/` folder)
+
 - **Express route definitions**: Ready-to-use router configurations
 - **Middleware integration**: Automatic middleware application based on configuration
 - **Controller binding**: Proper method binding for controller interfaces
@@ -113,10 +117,10 @@ module.exports = {
     if (tags.includes('auth')) return ['authenticate', 'authorize'];
     return [];
   },
-  getMiddlewareImport: (middlewareName) => {
+  getMiddlewareImport: middlewareName => {
     // Return import statement for middleware
     return `require('../middleware/${middlewareName}')`;
-  }
+  },
 };
 ```
 
@@ -165,6 +169,7 @@ The generator provides robust enum support:
 - **x-enum-varnames**: Support for custom enum key names via OpenAPI extension
 
 Example:
+
 ```yaml
 # OpenAPI spec
 MessageType:
@@ -174,11 +179,12 @@ MessageType:
 ```
 
 Generated TypeScript:
+
 ```typescript
 export enum MessageType {
   Text = 'TEXT',
   Image = 'IMAGE',
-  Video = 'VIDEO'
+  Video = 'VIDEO',
 }
 ```
 
@@ -222,6 +228,7 @@ app.use('/api/messages', messageRouter);
 After running the generator:
 
 1. **Create controller implementations**
+
    ```typescript
    import { MessageInterface } from './generated/controllers/message-interface';
 
@@ -233,6 +240,7 @@ After running the generator:
    ```
 
 2. **Wire up the generated routes**
+
    ```typescript
    import { createRoutes as createMessageRoutes } from './generated/routes/message-routes';
 
@@ -254,22 +262,3 @@ The generator provides clear error messages for common issues:
 - **Invalid enum values**: Detection of null/undefined in enum definitions
 - **File write errors**: Detailed error messages with file paths
 - **Middleware config errors**: Clear messages for missing or invalid middleware configuration
-
-## 🤝 Contributing
-
-Contributions are welcome! The modular architecture makes it easy to:
-
-- Add new generators in `src/generators/`
-- Add new validators in `src/validators/`
-- Add new utilities in `src/utils/`
-- Extend existing functionality
-
-## 📝 License
-
-ISC
-
-## 🔗 Related
-
-- [OpenAPI Specification](https://swagger.io/specification/)
-- [Express.js](https://expressjs.com/)
-- [TypeScript](https://www.typescriptlang.org/) 
