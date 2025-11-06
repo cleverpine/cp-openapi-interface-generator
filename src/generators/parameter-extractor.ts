@@ -4,9 +4,9 @@
 
 import type { OpenAPISpec } from '../types';
 import { toPascalCase } from '../utils/converters';
-import { resolveRef } from '../utils/openapi-resolver';
+import { resolveRef, getSchemaNameFromRef } from '../utils/openapi-resolver';
 import { getTypeFromSchema } from './interface-generator';
-import { MAX_PARAM_NAME_COMBINATION } from '../config/constants';
+import { MAX_PARAM_NAME_COMBINATION, HTTP_SUCCESS_STATUSES, CONTENT_TYPE } from '../config/constants';
 
 /**
  * Extract path parameters from OpenAPI parameters
@@ -132,7 +132,7 @@ export function getRequestTypeName(requestBody: any, operationId: string): strin
   }
 
   if (requestBody.$ref) {
-    return requestBody.$ref.split('/').pop() || 'Unknown';
+    return getSchemaNameFromRef(requestBody.$ref);
   }
 
   return `${toPascalCase(operationId)}Request`;
@@ -147,12 +147,12 @@ export function getResponseTypeName(responseBody: any, operationId: string): str
   }
 
   if (responseBody.$ref) {
-    return responseBody.$ref.split('/').pop() || 'Unknown';
+    return getSchemaNameFromRef(responseBody.$ref);
   }
 
   // Handle array responses
   if (responseBody.type === 'array' && responseBody.items?.$ref) {
-    const itemType = responseBody.items.$ref.split('/').pop() || 'Unknown';
+    const itemType = getSchemaNameFromRef(responseBody.items.$ref);
     return `${itemType}[]`;
   }
 
@@ -163,11 +163,9 @@ export function getResponseTypeName(responseBody: any, operationId: string): str
  * Enhanced response extraction supporting multiple success status codes
  */
 export function extractSchemaFromResponse(responses: any): any {
-  const HTTP_SUCCESS_STATUSES = ['200', '201', '202', '204', '205', '206', '207', '208'];
-
   for (const status of HTTP_SUCCESS_STATUSES) {
-    if (responses[status]?.content?.['application/json']?.schema) {
-      return responses[status].content['application/json'].schema;
+    if (responses[status]?.content?.[CONTENT_TYPE.JSON]?.schema) {
+      return responses[status].content[CONTENT_TYPE.JSON].schema;
     }
     if (responses[status] && !responses[status].content) {
       return undefined;

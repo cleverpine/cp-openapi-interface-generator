@@ -6,11 +6,27 @@ import type { OpenAPISpec } from '../types';
 import { toPascalCase } from '../utils/converters';
 import { resolveRef, getSchemaNameFromRef } from '../utils/openapi-resolver';
 import { generateEnum } from './enum-generator';
-import { PRIMITIVE_TYPES } from '../config/constants';
 
 // Global type deduplication to prevent duplicate generation
-export const globalSeenTypes = new Set<string>();
-export const generatedTypeDefinitions: Record<string, string> = {};
+// Note: These are module-private and should be reset between generation runs
+const globalSeenTypes = new Set<string>();
+const generatedTypeDefinitions: Record<string, string> = {};
+
+/**
+ * Reset the global type tracking state
+ * Should be called at the start of each generation run to prevent state leakage
+ */
+export function resetGeneratorState(): void {
+  globalSeenTypes.clear();
+  Object.keys(generatedTypeDefinitions).forEach(key => delete generatedTypeDefinitions[key]);
+}
+
+/**
+ * Get current global seen types (for testing/debugging)
+ */
+export function getGlobalSeenTypes(): ReadonlySet<string> {
+  return globalSeenTypes;
+}
 
 /**
  * Convert OpenAPI schema to TypeScript type string
@@ -58,6 +74,28 @@ export function getTypeFromSchema(schema: any, spec?: OpenAPISpec): string {
 
 /**
  * Convert OpenAPI schema value to TypeScript type string
+ *
+ * This function handles complex nested type generation and maintains global state
+ * to prevent duplicate type definitions. It recursively processes schemas and
+ * collects generated interface definitions in the nestedInterfaces array.
+ *
+ * @param value - The OpenAPI schema value to convert (can be object, array, enum, primitive)
+ * @param name - Base name for generating nested type names (e.g., "UserProfile" -> "UserProfileItem")
+ * @param nestedInterfaces - Array to collect generated nested interface definitions (mutated)
+ * @param spec - Full OpenAPI specification for resolving $ref references
+ * @returns TypeScript type string (e.g., "string", "UserProfile", "UserProfileItem[]")
+ *
+ * @example
+ * // For a nested object property:
+ * toTsType({ type: 'object', properties: { id: { type: 'string' } } }, 'UserAddress', [], spec)
+ * // Returns: 'UserAddressItem'
+ * // Adds to nestedInterfaces: 'interface UserAddressItem { id: string; }'
+ *
+ * @example
+ * // For a $ref:
+ * toTsType({ $ref: '#/components/schemas/User' }, 'profile', [], spec)
+ * // Returns: 'User'
+ * // Generates User interface if not already seen
  */
 export function toTsType(
   value: any,

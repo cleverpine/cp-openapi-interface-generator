@@ -21,11 +21,17 @@ export function generateEnum(
   const usedKeys = new Set<string>();
 
   schema.enum.forEach((value: any, index: number) => {
-    const comma = index < schema.enum.length - 1 ? ',' : '';
-    // Use validated x-enum-varnames if available, otherwise sanitize the value
-    const key = varNames[index] || sanitizeEnumKey(value, usedKeys);
-    const enumValue = getEnumValueString(value);
-    lines.push(`  ${key} = ${enumValue}${comma}`);
+    try {
+      const comma = index < schema.enum.length - 1 ? ',' : '';
+      // Use validated x-enum-varnames if available, otherwise sanitize the value
+      const key = varNames[index] || sanitizeEnumKey(value, usedKeys);
+      const enumValue = getEnumValueString(value);
+      lines.push(`  ${key} = ${enumValue}${comma}`);
+    } catch (error: any) {
+      throw new Error(
+        `Failed to generate enum ${name} at index ${index} (value: ${JSON.stringify(value)}): ${error.message}`
+      );
+    }
   });
 
   lines.push('}');
