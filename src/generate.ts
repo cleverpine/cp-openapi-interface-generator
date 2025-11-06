@@ -484,7 +484,7 @@ function toTsType(value: any, name: string, nestedInterfaces: string[], spec: Op
   if (value.type === 'object' || value.properties) {
     // If object has no properties and no additionalProperties defined, treat as generic object
     if (value.type === 'object' && !value.properties && value.additionalProperties === undefined) {
-      return 'Record<string, any>';
+      return 'Record<string, unknown>';
     }
 
     const typeName = toPascalCase(`${name}Item`);
@@ -577,9 +577,11 @@ function validateEnumVarNames(varNames: any, enumValues: any[]): string[] {
  * Get properly formatted enum value for TypeScript enum
  */
 function getEnumValueString(value: any): string {
-  // Handle null/undefined
+  // Handle null/undefined - these should not appear in valid OpenAPI enum definitions
+  // TypeScript enums cannot have null as a value
   if (value === null || value === undefined) {
-    return 'null';
+    console.warn(`⚠️  Warning: Enum contains null/undefined value, which is invalid. Skipping...`);
+    throw new Error('Invalid enum value: null or undefined are not allowed in TypeScript enums');
   }
 
   // Numbers and booleans don't need quotes
@@ -608,7 +610,12 @@ function generateInterface(
   nestedInterfaces: string[] = [],
   exportMain = true,
 ): string {
-  if (!schema || (!schema.properties && !schema.type && !schema.enum)) {
+  // Schema is considered invalid if it has no properties, type, or enum definition
+  const hasProperties = schema?.properties;
+  const hasType = schema?.type;
+  const hasEnum = schema?.enum;
+
+  if (!schema || (!hasProperties && !hasType && !hasEnum)) {
     return `${exportMain ? 'export ' : ''}type ${name} = unknown;`;
   }
 
