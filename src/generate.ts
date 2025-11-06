@@ -216,6 +216,8 @@ function extractQueryParams(parameters: any[], spec: OpenAPISpec): Record<string
 
 /**
  * Convert OpenAPI schema to TypeScript type
+ * Note: For inline enums in parameters, we generate union types for simplicity.
+ * Named enum types are generated separately through the main schema processing.
  */
 function getTypeFromSchema(schema: any, spec?: OpenAPISpec): string {
   if (!schema) return 'unknown'; // Use 'unknown' instead of 'any' for better type safety
@@ -229,9 +231,17 @@ function getTypeFromSchema(schema: any, spec?: OpenAPISpec): string {
     return 'unknown';
   }
 
-  // Handle enums - generate union type
+  // Handle enums - generate union type for inline enums in parameters
+  // This is intentionally different from named enums which use the enum keyword
   if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
-    return schema.enum.map((value: any) => `'${value}'`).join(' | ');
+    return schema.enum.map((value: any) => {
+      if (typeof value === 'number' || typeof value === 'boolean') {
+        return String(value);
+      }
+      // Escape single quotes in string values
+      const escaped = String(value).replace(/'/g, "\\'");
+      return `'${escaped}'`;
+    }).join(' | ');
   }
 
   switch (schema.type) {
@@ -476,7 +486,7 @@ function toTsType(value: any, name: string, nestedInterfaces: string[], spec: Op
 /**
  * Sanitize enum key to be a valid TypeScript identifier
  */
-function sanitizeEnumKey(value: any): string {
+function sanitizeEnumKey(value: any, usedKeys: Set<string> = new Set()): string {
   const str = String(value);
 
   // Convert to valid TypeScript identifier
@@ -492,7 +502,48 @@ function sanitizeEnumKey(value: any): string {
   }
 
   // Fallback if empty after sanitization
-  return sanitized || 'VALUE';
+  if (!sanitized) {
+    sanitized = 'VALUE';
+  }
+
+  // Ensure uniqueness by appending numbers if needed
+  let uniqueKey = sanitized;
+  let counter = 1;
+  while (usedKeys.has(uniqueKey)) {
+    uniqueKey = `${sanitized}_${counter}`;
+    counter++;
+  }
+
+  usedKeys.add(uniqueKey);
+  return uniqueKey;
+}
+
+/**
+ * Validate enum varnames array against enum values
+ */
+function validateEnumVarNames(varNames: any, enumValues: any[]): string[] {
+  if (!Array.isArray(varNames) || varNames.length !== enumValues.length) {
+    return []; // Return empty to trigger fallback
+  }
+
+  const usedNames = new Set<string>();
+  const validNames: string[] = [];
+
+  for (const name of varNames) {
+    // Check if valid identifier and unique
+    if (
+      typeof name === 'string' &&
+      /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name) &&
+      !usedNames.has(name)
+    ) {
+      validNames.push(name);
+      usedNames.add(name);
+    } else {
+      return []; // Invalid name found, use fallback for all
+    }
+  }
+
+  return validNames;
 }
 
 /**
@@ -509,8 +560,14 @@ function getEnumValueString(value: any): string {
     return String(value);
   }
 
-  // Strings need quotes and escape single quotes
-  const stringValue = String(value).replace(/'/g, "\\'");
+  // Strings need quotes and proper escaping
+  const stringValue = String(value)
+    .replace(/\\/g, '\\\\')  // Escape backslashes first
+    .replace(/'/g, "\\'")     // Escape single quotes
+    .replace(/\n/g, '\\n')    // Escape newlines
+    .replace(/\r/g, '\\r')    // Escape carriage returns
+    .replace(/\t/g, '\\t');   // Escape tabs
+
   return `'${stringValue}'`;
 }
 
@@ -531,12 +588,13 @@ function generateInterface(
   // Handle enum schemas - generate TypeScript enum
   if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
     const lines = [`${exportMain ? 'export ' : ''}enum ${name} {`];
-    const varNames = schema['x-enum-varnames'] || [];
+    const varNames = validateEnumVarNames(schema['x-enum-varnames'], schema.enum);
+    const usedKeys = new Set<string>();
 
     schema.enum.forEach((value: any, index: number) => {
       const comma = index < schema.enum.length - 1 ? ',' : '';
-      // Use x-enum-varnames if available, otherwise sanitize the value
-      const key = varNames[index] || sanitizeEnumKey(value);
+      // Use validated x-enum-varnames if available, otherwise sanitize the value
+      const key = varNames[index] || sanitizeEnumKey(value, usedKeys);
       const enumValue = getEnumValueString(value);
       lines.push(`  ${key} = ${enumValue}${comma}`);
     });
