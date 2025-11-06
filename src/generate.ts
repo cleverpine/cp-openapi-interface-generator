@@ -88,18 +88,18 @@ try {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   });
 } catch (error) {
-  console.error(`❌ Failed to create output directories: ${error}`);
+  console.error(`Failed to create output directories: ${error}`);
   process.exit(1);
 }
 
 /**
- * Safely write file with error handling
+ * Write file with error handling
  */
-function safeWriteFile(filePath: string, content: string): void {
+function writeFileWithError(filePath: string, content: string): void {
   try {
     fs.writeFileSync(filePath, content);
   } catch (error: any) {
-    console.error(`❌ Failed to write file ${filePath}: ${error.message || error}`);
+    console.error(`Failed to write file ${filePath}: ${error.message || error}`);
     throw error; // Re-throw to stop generation
   }
 }
@@ -580,7 +580,7 @@ function getEnumValueString(value: any): string {
   // Handle null/undefined - these should not appear in valid OpenAPI enum definitions
   // TypeScript enums cannot have null as a value
   if (value === null || value === undefined) {
-    console.warn(`⚠️  Warning: Enum contains null/undefined value, which is invalid. Skipping...`);
+    console.error(`Invalid enum value: null or undefined are not allowed in TypeScript enums`);
     throw new Error('Invalid enum value: null or undefined are not allowed in TypeScript enums');
   }
 
@@ -677,11 +677,11 @@ try {
   }
 } catch (error: any) {
   if (error.code === 'ENOENT') {
-    console.error(`❌ OpenAPI spec file not found: ${openApiPath}`);
+    console.error(`OpenAPI spec file not found: ${openApiPath}`);
   } else if (error.message?.includes('Invalid OpenAPI')) {
-    console.error(`❌ ${error.message}`);
+    console.error(`${error.message}`);
   } else {
-    console.error(`❌ Failed to load OpenAPI spec from ${openApiPath}: ${error.message || error}`);
+    console.error(`Failed to load OpenAPI spec from ${openApiPath}: ${error.message || error}`);
   }
   process.exit(1);
 }
@@ -902,7 +902,7 @@ if (allTypes.length > 0) {
     // Add the type definition
     fileContent.push(exportedTypeCode);
 
-    safeWriteFile(modelFilePath, fileContent.join('\n'));
+    writeFileWithError(modelFilePath, fileContent.join('\n'));
     generatedModelFiles.set(typeName, modelFileName);
     modelExports.push(typeName);
   });
@@ -918,7 +918,7 @@ if (allTypes.length > 0) {
   ].join('\n');
 
   const indexFile = path.join(modelsDir, 'index.ts');
-  safeWriteFile(indexFile, indexContent);
+  writeFileWithError(indexFile, indexContent);
 }
 
 // Generate controller interfaces for each tag with imports from models
@@ -996,7 +996,7 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
   interfaceLines.push(`}`);
 
   // Write controller interface file
-  safeWriteFile(interfaceFile, interfaceLines.join('\n'));
+  writeFileWithError(interfaceFile, interfaceLines.join('\n'));
 });
 
 // Load middleware configuration
@@ -1012,15 +1012,15 @@ try {
     throw new Error('Invalid middleware config: missing required methods (getMiddleware, getMiddlewareImport)');
   }
 
-  console.log(`✅ Loaded middleware configuration from: ${middlewareConfigPath}`);
+  console.log(`Loaded middleware configuration from: ${middlewareConfigPath}`);
 } catch (error: any) {
   if (error.code === 'MODULE_NOT_FOUND') {
     console.log(
-      `⚠️  No middleware configuration found at: ${middlewareConfigPath} - routes will be generated without middleware`,
+      `No middleware configuration found at: ${middlewareConfigPath} - routes will be generated without middleware`,
     );
   } else {
-    console.error(`❌ Error loading middleware config: ${error.message || error}`);
-    console.log(`⚠️  Continuing without middleware configuration...`);
+    console.error(`Error loading middleware config: ${error.message || error}`);
+    console.log(`Continuing without middleware configuration...`);
   }
 
   middlewareConfig = {
@@ -1140,7 +1140,7 @@ Object.entries(groupedByTag).forEach(([tag, methods]) => {
   routeLines.push(`}`);
 
   // Write route file
-  safeWriteFile(routeFile, routeLines.join('\n'));
+  writeFileWithError(routeFile, routeLines.join('\n'));
 });
 
 console.log(`Files generated successfully in ${generatedDir}`);
