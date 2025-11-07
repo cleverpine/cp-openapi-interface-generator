@@ -11,6 +11,8 @@ import { generateEnum } from './enum-generator';
 // Note: These are module-private and should be reset between generation runs
 const globalSeenTypes = new Set<string>();
 const generatedTypeDefinitions: Record<string, string> = {};
+// Map from enum value hash to enum type name for deduplication
+const enumValueHashToTypeName = new Map<string, string>();
 
 /**
  * Reset the global type tracking state
@@ -19,6 +21,7 @@ const generatedTypeDefinitions: Record<string, string> = {};
 export function resetGeneratorState(): void {
   globalSeenTypes.clear();
   Object.keys(generatedTypeDefinitions).forEach(key => delete generatedTypeDefinitions[key]);
+  enumValueHashToTypeName.clear();
 }
 
 /**
@@ -26,6 +29,24 @@ export function resetGeneratorState(): void {
  */
 export function getGlobalSeenTypes(): ReadonlySet<string> {
   return globalSeenTypes;
+}
+
+/**
+ * Get all generated type definitions
+ * Returns a readonly record of all types generated during the current run
+ */
+export function getGeneratedTypeDefinitions(): Readonly<Record<string, string>> {
+  return generatedTypeDefinitions;
+}
+
+/**
+ * Create a hash of enum values for deduplication
+ * Sorts values and creates a deterministic string representation
+ */
+function getEnumValuesHash(enumValues: any[]): string {
+  // Create a stable representation by sorting and stringifying
+  const sortedValues = [...enumValues].sort();
+  return JSON.stringify(sortedValues);
 }
 
 /**
@@ -118,14 +139,25 @@ export function toTsType(
     return 'unknown';
   }
 
-  // Handle inline enums - create a nested enum type
+  // Handle inline enums - create a nested enum type with deduplication
   if (value.enum && Array.isArray(value.enum) && value.enum.length > 0) {
+    const enumHash = getEnumValuesHash(value.enum);
+
+    // Check if we've already generated an enum with these exact values
+    if (enumValueHashToTypeName.has(enumHash)) {
+      // Reuse the existing enum type
+      return enumValueHashToTypeName.get(enumHash)!;
+    }
+
+    // Generate new enum type
     const typeName = toPascalCase(name);
     if (!globalSeenTypes.has(typeName)) {
       globalSeenTypes.add(typeName);
       const enumCode = generateInterface(typeName, value, spec, nestedInterfaces, true);
       generatedTypeDefinitions[typeName] = enumCode;
       nestedInterfaces.push(enumCode);
+      // Track this enum's values for future deduplication
+      enumValueHashToTypeName.set(enumHash, typeName);
     }
     return typeName;
   }
@@ -159,8 +191,11 @@ export function toTsType(
   }
 
   if (value.type === 'object' || value.properties) {
-    // If object has no properties and no additionalProperties defined, treat as generic object
-    if (value.type === 'object' && !value.properties && value.additionalProperties === undefined) {
+    // If object has no properties, treat as generic object
+    // This covers two cases:
+    // 1. No properties and no additionalProperties defined
+    // 2. No properties but additionalProperties: true (dynamic object)
+    if (value.type === 'object' && !value.properties) {
       return 'Record<string, unknown>';
     }
 
