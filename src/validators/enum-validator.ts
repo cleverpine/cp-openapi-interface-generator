@@ -3,7 +3,7 @@
  */
 
 /**
- * Validate enum varnames array against enum values
+ * Validate enum varNames array against enum values
  * @param varNames - Array of proposed variable names from x-enum-varnames
  * @param enumValues - Array of enum values from the schema
  * @returns Validated array of variable names, or empty array if validation fails
