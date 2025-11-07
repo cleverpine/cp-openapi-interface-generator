@@ -26,6 +26,7 @@ export function resetGeneratorState(): void {
 
 /**
  * Get current global seen types (for testing/debugging)
+ * @returns ReadonlySet of all type names generated in the current run
  */
 export function getGlobalSeenTypes(): ReadonlySet<string> {
   return globalSeenTypes;
@@ -34,6 +35,7 @@ export function getGlobalSeenTypes(): ReadonlySet<string> {
 /**
  * Get all generated type definitions
  * Returns a readonly record of all types generated during the current run
+ * @returns Readonly record mapping type names to their TypeScript code
  */
 export function getGeneratedTypeDefinitions(): Readonly<Record<string, string>> {
   return generatedTypeDefinitions;
@@ -41,16 +43,23 @@ export function getGeneratedTypeDefinitions(): Readonly<Record<string, string>> 
 
 /**
  * Create a hash of enum values for deduplication
- * Sorts values and creates a deterministic string representation
+ * Creates a deterministic string representation by stringifying values in original order
+ * and then sorting the resulting strings to ensure consistent hashing across mixed types
+ * @param enumValues - Array of enum values (can be mixed types)
+ * @returns Deterministic hash string for comparing enum value sets
  */
 function getEnumValuesHash(enumValues: any[]): string {
-  // Create a stable representation by sorting and stringifying
-  const sortedValues = [...enumValues].sort();
-  return JSON.stringify(sortedValues);
+  // Convert all values to strings first, then sort for stable comparison
+  // This ensures consistent hashing regardless of original value types
+  const stringifiedValues = enumValues.map(v => JSON.stringify(v)).sort();
+  return JSON.stringify(stringifiedValues);
 }
 
 /**
  * Convert OpenAPI schema to TypeScript type string
+ * @param schema - OpenAPI schema object
+ * @param spec - Optional full OpenAPI specification for resolving $ref
+ * @returns TypeScript type string (e.g., "string", "number", "string | number")
  */
 export function getTypeFromSchema(schema: any, spec?: OpenAPISpec): string {
   if (!schema) return 'unknown';
@@ -224,6 +233,12 @@ export function toTsType(
 
 /**
  * Generate TypeScript interface from OpenAPI schema
+ * @param name - Name for the generated interface
+ * @param schema - OpenAPI schema object
+ * @param spec - Full OpenAPI specification for resolving $ref
+ * @param nestedInterfaces - Array to collect nested interface definitions (mutated, default: [])
+ * @param exportMain - Whether to export the interface (default: true)
+ * @returns TypeScript interface or type alias code
  */
 export function generateInterface(
   name: string,
@@ -275,6 +290,10 @@ export function generateInterface(
 
 /**
  * Generate TypeScript interface from parameter object
+ * @param params - Record mapping parameter names to TypeScript types
+ * @param typeName - Name for the generated interface
+ * @param exportInterface - Whether to export the interface (default: true)
+ * @returns TypeScript interface code or '{}' if params is empty
  */
 export function generateParamsInterface(
   params: Record<string, string>,

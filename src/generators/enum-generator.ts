@@ -6,6 +6,11 @@ import { validateEnumVarNames, sanitizeEnumKey, getEnumValueString } from '../va
 
 /**
  * Generate TypeScript enum from OpenAPI enum schema
+ * @param name - The name for the generated enum type
+ * @param schema - OpenAPI schema object containing enum values
+ * @param exportMain - Whether to export the enum (default: true)
+ * @returns The generated TypeScript enum code as a string
+ * @throws Error if schema is invalid or enum generation fails
  */
 export function generateEnum(
   name: string,

@@ -128,6 +128,7 @@ for (const [route, methods] of Object.entries(spec.paths)) {
 
 // Collect all types needed across all endpoints
 const allTypes: string[] = [];
+const collectedTypeNames = new Set<string>(); // Track type names for O(1) deduplication
 const parameterTypes = new Map<string, string>();
 
 // First pass: collect all parameter types
@@ -139,9 +140,10 @@ Object.values(groupedByTag).forEach(methods => {
       const reusableTypeName = getReusableParamTypeName(pathParams, 'path', fallbackName, parameterTypes);
 
       // Check if we need to generate this parameter type
-      if (!allTypes.some(t => t.includes(`interface ${reusableTypeName}`))) {
+      if (!collectedTypeNames.has(reusableTypeName)) {
         const paramInterface = generateParamsInterface(pathParams, reusableTypeName, true);
         allTypes.push(paramInterface);
+        collectedTypeNames.add(reusableTypeName);
       }
     }
 
@@ -151,9 +153,10 @@ Object.values(groupedByTag).forEach(methods => {
       const reusableTypeName = getReusableParamTypeName(queryParams, 'query', fallbackName, parameterTypes);
 
       // Check if we need to generate this parameter type
-      if (!allTypes.some(t => t.includes(`interface ${reusableTypeName}`))) {
+      if (!collectedTypeNames.has(reusableTypeName)) {
         const paramInterface = generateParamsInterface(queryParams, reusableTypeName, true);
         allTypes.push(paramInterface);
+        collectedTypeNames.add(reusableTypeName);
       }
     }
   });
@@ -172,12 +175,14 @@ Object.values(groupedByTag).forEach(methods => {
       const mainInterface = generateInterface(reqTypeName, resolvedRequestBody, spec, nestedTypes, true);
 
       // Only add if not already present
-      if (!allTypes.some(t => t.includes(`interface ${reqTypeName}`) || t.includes(`enum ${reqTypeName}`))) {
+      if (!collectedTypeNames.has(reqTypeName)) {
         allTypes.push(mainInterface);
+        collectedTypeNames.add(reqTypeName);
         nestedTypes.forEach(nt => {
           const typeName = nt.match(/(?:interface|type|enum)\s+(\w+)/)?.[1];
-          if (typeName && !allTypes.some(t => t.includes(`${typeName}`))) {
+          if (typeName && !collectedTypeNames.has(typeName)) {
             allTypes.push(nt);
+            collectedTypeNames.add(typeName);
           }
         });
       }
@@ -198,12 +203,14 @@ Object.values(groupedByTag).forEach(methods => {
           const nestedTypes: string[] = [];
           const mainInterface = generateInterface(baseResTypeName, resolvedItem, spec, nestedTypes, true);
 
-          if (!allTypes.some(t => t.includes(`interface ${baseResTypeName}`) || t.includes(`enum ${baseResTypeName}`))) {
+          if (!collectedTypeNames.has(baseResTypeName)) {
             allTypes.push(mainInterface);
+            collectedTypeNames.add(baseResTypeName);
             nestedTypes.forEach(nt => {
               const typeName = nt.match(/(?:interface|type|enum)\s+(\w+)/)?.[1];
-              if (typeName && !allTypes.some(t => t.includes(`${typeName}`))) {
+              if (typeName && !collectedTypeNames.has(typeName)) {
                 allTypes.push(nt);
+                collectedTypeNames.add(typeName);
               }
             });
           }
@@ -212,12 +219,14 @@ Object.values(groupedByTag).forEach(methods => {
         const nestedTypes: string[] = [];
         const mainInterface = generateInterface(baseResTypeName, resolvedResponseBody, spec, nestedTypes, true);
 
-        if (!allTypes.some(t => t.includes(`interface ${baseResTypeName}`) || t.includes(`enum ${baseResTypeName}`))) {
+        if (!collectedTypeNames.has(baseResTypeName)) {
           allTypes.push(mainInterface);
+          collectedTypeNames.add(baseResTypeName);
           nestedTypes.forEach(nt => {
             const typeName = nt.match(/(?:interface|type|enum)\s+(\w+)/)?.[1];
-            if (typeName && !allTypes.some(t => t.includes(`${typeName}`))) {
+            if (typeName && !collectedTypeNames.has(typeName)) {
               allTypes.push(nt);
+              collectedTypeNames.add(typeName);
             }
           });
         }
@@ -257,21 +266,23 @@ try {
 
   console.log(`Loaded middleware configuration from: ${middlewareConfigPath}`);
   middlewareConfig = loadedConfig;
-} catch (error: any) {
-  if (error.code === 'MODULE_NOT_FOUND') {
-    console.log(
-      `No middleware configuration found at: ${middlewareConfigPath} - routes will be generated without middleware`
-    );
-  } else {
-    console.error(`Error loading middleware config: ${error.message || error}`);
-    console.log(`Continuing without middleware configuration...`);
-  }
-
+} catch (error) {
   // Default middleware config with no middleware
   middlewareConfig = {
     getMiddleware: () => [],
     getMiddlewareImport: () => null,
   };
+
+  // Check if it's a module not found error vs other errors
+  if (error && typeof error === 'object' && 'code' in error && error.code === 'MODULE_NOT_FOUND') {
+    console.log(
+      `No middleware configuration found at: ${middlewareConfigPath} - routes will be generated without middleware`
+    );
+  } else {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`Error loading middleware config: ${errorMessage}`);
+    console.log(`Continuing without middleware configuration...`);
+  }
 }
 
 // Generate route files for each tag

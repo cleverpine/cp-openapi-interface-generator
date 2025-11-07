@@ -6,6 +6,9 @@ import type { OpenAPISpec } from '../types';
 
 /**
  * Resolve OpenAPI $ref reference to actual schema object
+ * @param ref - The $ref string (e.g., "#/components/schemas/User")
+ * @param spec - The complete OpenAPI specification object
+ * @returns The resolved schema object
  * @throws Error if ref is invalid or cannot be resolved
  */
 export function resolveRef(ref: string, spec: OpenAPISpec): any {
@@ -29,6 +32,8 @@ export function resolveRef(ref: string, spec: OpenAPISpec): any {
 
 /**
  * Extract the schema name from a $ref string
+ * @param ref - The $ref string (e.g., "#/components/schemas/User")
+ * @returns The schema name (e.g., "User")
  * @throws Error if ref is invalid or schema name cannot be extracted
  */
 export function getSchemaNameFromRef(ref: string): string {

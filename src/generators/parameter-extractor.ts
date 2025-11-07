@@ -10,6 +10,9 @@ import { MAX_PARAM_NAME_COMBINATION, HTTP_SUCCESS_STATUSES, CONTENT_TYPE } from 
 
 /**
  * Extract path parameters from OpenAPI parameters
+ * @param parameters - Array of OpenAPI parameter objects
+ * @param spec - The complete OpenAPI specification object
+ * @returns Record mapping parameter names to TypeScript types
  */
 export function extractPathParams(parameters: any[], spec: OpenAPISpec): Record<string, string> {
   if (!parameters) return {};
@@ -39,6 +42,9 @@ export function extractPathParams(parameters: any[], spec: OpenAPISpec): Record<
 
 /**
  * Extract query parameters from OpenAPI parameters
+ * @param parameters - Array of OpenAPI parameter objects
+ * @param spec - The complete OpenAPI specification object
+ * @returns Record mapping parameter names (with ? suffix for optional) to TypeScript types
  */
 export function extractQueryParams(parameters: any[], spec: OpenAPISpec): Record<string, string> {
   if (!parameters) return {};
@@ -70,6 +76,8 @@ export function extractQueryParams(parameters: any[], spec: OpenAPISpec): Record
 
 /**
  * Create a signature string for parameter deduplication
+ * @param params - Record of parameter names to types
+ * @returns Deterministic signature string (e.g., "id:string|name:string")
  */
 export function createParamSignature(params: Record<string, string>): string {
   const sortedKeys = Object.keys(params).sort();
@@ -78,6 +86,11 @@ export function createParamSignature(params: Record<string, string>): string {
 
 /**
  * Find or create a reusable parameter type name
+ * @param params - Record of parameter names to types
+ * @param paramType - Type of parameters ('path' or 'query')
+ * @param fallbackName - Name to use for complex parameter combinations (4+ parameters)
+ * @param parameterTypes - Map tracking parameter signatures to type names (mutated)
+ * @returns Type name for this parameter combination (reused if signature matches existing)
  */
 export function getReusableParamTypeName(
   params: Record<string, string>,
@@ -125,6 +138,9 @@ export function getReusableParamTypeName(
 
 /**
  * Generate TypeScript type name for request body
+ * @param requestBody - OpenAPI request body schema object
+ * @param operationId - Operation ID from OpenAPI spec
+ * @returns TypeScript type name or 'void' if no request body
  */
 export function getRequestTypeName(requestBody: any, operationId: string): string {
   if (!requestBody) {
@@ -140,6 +156,9 @@ export function getRequestTypeName(requestBody: any, operationId: string): strin
 
 /**
  * Generate TypeScript type name for response body
+ * @param responseBody - OpenAPI response body schema object
+ * @param operationId - Operation ID from OpenAPI spec
+ * @returns TypeScript type name (with [] suffix for arrays) or 'void' if no response body
  */
 export function getResponseTypeName(responseBody: any, operationId: string): string {
   if (!responseBody) {
@@ -161,6 +180,8 @@ export function getResponseTypeName(responseBody: any, operationId: string): str
 
 /**
  * Enhanced response extraction supporting multiple success status codes
+ * @param responses - OpenAPI responses object
+ * @returns Schema object from first successful response status code, or undefined
  */
 export function extractSchemaFromResponse(responses: any): any {
   for (const status of HTTP_SUCCESS_STATUSES) {

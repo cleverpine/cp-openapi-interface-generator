@@ -15,6 +15,9 @@ import { PRIMITIVE_TYPES, TYPE_DEPENDENCY_PATTERNS, FILE_HEADERS } from '../conf
  * - Intersection types (A & B)
  *
  * This is acceptable since the generator doesn't produce these patterns.
+ *
+ * @param typeCode - TypeScript type definition code
+ * @returns Set of type names that this type depends on
  */
 export function extractTypeDependencies(typeCode: string): Set<string> {
   const dependencies = new Set<string>();
@@ -47,6 +50,8 @@ export function extractTypeDependencies(typeCode: string): Set<string> {
 
 /**
  * Ensure type definition has export keyword
+ * @param typeCode - TypeScript type definition code
+ * @returns Type definition with export keyword prepended if not present
  */
 export function ensureExported(typeCode: string): string {
   if (typeCode.includes('export ')) {
@@ -57,6 +62,8 @@ export function ensureExported(typeCode: string): string {
 
 /**
  * Generate individual model files and index
+ * @param allTypes - Array of TypeScript type definition strings
+ * @param modelsDir - Directory path where model files will be generated
  */
 export function generateModelFiles(allTypes: string[], modelsDir: string): void {
   const generatedModelFiles = new Map<string, string>();

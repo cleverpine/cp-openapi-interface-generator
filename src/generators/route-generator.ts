@@ -11,6 +11,8 @@ import { FILE_HEADERS } from '../config/constants';
 /**
  * Convert OpenAPI path to Express route path
  * /messages/{conversationId}/{messageId} -> /messages/:conversationId/:messageId
+ * @param openApiPath - OpenAPI path with {param} syntax
+ * @returns Express route path with :param syntax
  */
 export function convertPathToExpressRoute(openApiPath: string): string {
   return openApiPath.replace(/{([^}]+)}/g, ':$1');
@@ -18,6 +20,8 @@ export function convertPathToExpressRoute(openApiPath: string): string {
 
 /**
  * Find the common path prefix for a group of paths
+ * @param paths - Array of path strings to analyze
+ * @returns Common prefix path (e.g., "/messages") or empty string if none
  */
 export function findCommonPathPrefix(paths: string[]): string {
   if (paths.length === 0) return '';
@@ -38,6 +42,11 @@ export function findCommonPathPrefix(paths: string[]): string {
 
 /**
  * Generate route file for a tag
+ * @param tag - OpenAPI tag name for grouping endpoints
+ * @param methods - Array of path methods belonging to this tag
+ * @param routesDir - Directory path where route files will be generated
+ * @param controllersFolder - Folder name for controller imports (relative path)
+ * @param middlewareConfig - Configuration object for middleware generation
  */
 export function generateRouteFile(
   tag: string,
@@ -74,14 +83,15 @@ export function generateRouteFile(
       .sort()
       .forEach(middlewareName => {
         const importStatement = middlewareConfig.getMiddlewareImport(middlewareName);
-        routeLines.push(`const ${middlewareName} = ${importStatement};`);
+        // Skip middleware if import statement is null
+        if (importStatement) {
+          routeLines.push(`const ${middlewareName} = ${importStatement};`);
+        }
       });
     routeLines.push('');
   }
 
   // Router setup - using dependency injection pattern
-  routeLines.push(`const router = Router();`);
-  routeLines.push('');
   routeLines.push(`// Controller instance should be injected from outside`);
   routeLines.push(`// Example: const router = createRoutes(${controllerName});`);
   routeLines.push(`export function createRoutes(${controllerName}: ${interfaceName}): Router {`);

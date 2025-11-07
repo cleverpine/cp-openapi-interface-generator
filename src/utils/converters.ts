@@ -4,6 +4,8 @@
 
 /**
  * Convert string to PascalCase (e.g., "user-name" -> "UserName")
+ * @param name - The string to convert to PascalCase
+ * @returns The PascalCase version of the input string
  * @throws Error if input is not a non-empty string
  */
 export const toPascalCase = (name: string): string => {
@@ -19,6 +21,8 @@ export const toPascalCase = (name: string): string => {
 
 /**
  * Convert string to kebab-case (e.g., "UserName" -> "user-name")
+ * @param name - The string to convert to kebab-case
+ * @returns The kebab-case version of the input string
  * @throws Error if input is not a non-empty string
  */
 export const toKebabCase = (name: string): string => {

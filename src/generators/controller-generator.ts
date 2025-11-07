@@ -10,6 +10,11 @@ import { getRequestTypeName, getResponseTypeName, getReusableParamTypeName } fro
 
 /**
  * Generate controller interface file for a tag
+ * @param tag - OpenAPI tag name for grouping endpoints
+ * @param methods - Array of path methods belonging to this tag
+ * @param controllersDir - Directory path where controller files will be generated
+ * @param modelsFolder - Folder name for model imports (relative path)
+ * @param parameterTypes - Map of parameter signatures to reusable type names
  */
 export function generateControllerInterface(
   tag: string,

@@ -4,6 +4,9 @@
 
 /**
  * Validate enum varnames array against enum values
+ * @param varNames - Array of proposed variable names from x-enum-varnames
+ * @param enumValues - Array of enum values from the schema
+ * @returns Validated array of variable names, or empty array if validation fails
  */
 export function validateEnumVarNames(varNames: any, enumValues: any[]): string[] {
   if (!Array.isArray(varNames) || varNames.length !== enumValues.length) {
@@ -32,6 +35,9 @@ export function validateEnumVarNames(varNames: any, enumValues: any[]): string[]
 
 /**
  * Sanitize enum key to be a valid TypeScript identifier
+ * @param value - The enum value to convert to a valid identifier
+ * @param usedKeys - Set of already used keys to ensure uniqueness (mutated, default: new Set())
+ * @returns Valid TypeScript identifier, guaranteed to be unique
  */
 export function sanitizeEnumKey(value: any, usedKeys: Set<string> = new Set()): string {
   const str = String(value);
@@ -67,6 +73,9 @@ export function sanitizeEnumKey(value: any, usedKeys: Set<string> = new Set()): 
 
 /**
  * Get properly formatted enum value for TypeScript enum
+ * @param value - The enum value to format (number, boolean, or string)
+ * @returns Formatted enum value string (numbers/booleans unquoted, strings quoted and escaped)
+ * @throws Error if value is null or undefined
  */
 export function getEnumValueString(value: any): string {
   // Handle null/undefined - these should not appear in valid OpenAPI enum definitions
